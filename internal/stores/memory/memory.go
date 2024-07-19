@@ -1,4 +1,4 @@
-package stores
+package memory
 
 import (
 	"sync"
@@ -6,15 +6,15 @@ import (
 	"github.com/rcbadiale/go-rate-limiter/pkg/status"
 )
 
-// Memory represents a memory store for rate limiter statuses.
-type Memory struct {
+// MemoryStore represents a memory store for rate limiter statuses.
+type MemoryStore struct {
 	statuses map[string]*status.Status
 	mu       sync.Mutex
 }
 
-// NewMemory returns a new memory store.
-func NewMemory() *Memory {
-	return &Memory{
+// NewMemoryStore returns a new memory store.
+func NewMemoryStore() *MemoryStore {
+	return &MemoryStore{
 		statuses: make(map[string]*status.Status),
 	}
 }
@@ -22,7 +22,7 @@ func NewMemory() *Memory {
 // Get returns the status of a key.
 //
 // If the key does not exist, it resets the status.
-func (m *Memory) Get(key string) *status.Status {
+func (m *MemoryStore) Get(key string) *status.Status {
 	s, ok := m.statuses[key]
 	if !ok {
 		return m.Reset(key)
@@ -33,14 +33,10 @@ func (m *Memory) Get(key string) *status.Status {
 // Increment increments the count of a key.
 //
 // If the key does not exist, it resets the status.
-func (m *Memory) Increment(key string) *status.Status {
+func (m *MemoryStore) Increment(key string) *status.Status {
+	s := m.Get(key)
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	s, ok := m.statuses[key]
-	if !ok {
-		return m.Reset(key)
-	}
 	s.Count += 1
 	return s
 }
@@ -48,7 +44,7 @@ func (m *Memory) Increment(key string) *status.Status {
 // Reset resets the status of a key.
 //
 // If the key does not exist, it creates a new status.
-func (m *Memory) Reset(key string) *status.Status {
+func (m *MemoryStore) Reset(key string) *status.Status {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

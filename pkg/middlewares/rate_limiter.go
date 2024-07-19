@@ -10,6 +10,10 @@ import (
 	"github.com/rcbadiale/go-rate-limiter/pkg/limiter"
 )
 
+type contextKey string
+
+const rateLimitAllowedKey contextKey = "rateLimitAllowed"
+
 // defaultKeyMapper returns the IP address of the request as the key for the rate limiter.
 //
 // It is used when no keyMapper function is provided to the NewRateLimiterMiddleware function.
@@ -44,13 +48,13 @@ func NewRateLimiterMiddleware(l *limiter.Limiter, keyMapper func(*http.Request) 
 				next.ServeHTTP(w, r)
 				return
 			}
-			if r.Context().Value("rateLimitAllowed") != true && l.ShouldLimit(key) {
-				log.Printf("limited key %s\n", key)
+			if r.Context().Value(rateLimitAllowedKey) != true && l.ShouldLimit(key) {
+				log.Printf("%s | LIMITED | %s", r.Context().Value(uidKey), key)
 				w.WriteHeader(http.StatusTooManyRequests)
 				w.Write([]byte(`{"message": "you have reached the maximum number of requests or actions allowed within a certain time frame"}`))
 				return
 			}
-			r = r.WithContext(context.WithValue(r.Context(), "rateLimitAllowed", true))
+			r = r.WithContext(context.WithValue(r.Context(), rateLimitAllowedKey, true))
 			next.ServeHTTP(w, r)
 		})
 	}
